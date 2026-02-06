@@ -7,30 +7,49 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
 @Service
-@RequiredArgsConstructor
 public class EmailService {
 
+    @Value("${brevo.api.key}")
+    private String apiKey;
+
     @Value("${spring.mail.properties.mail.smtp.from}")
-    private String fromEmail;
+    private String from;
 
-    private final JavaMailSender mailSender;
+    private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
-    public void sendEmail(String to, String subject, String body){
-
-        // Implementation for sending email
-
+    public void sendEmail(String to, String subject, String content) {
         try {
+            HttpURLConnection conn =
+                    (HttpURLConnection) new URL(BREVO_URL).openConnection();
 
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("accept", "application/json");
+            conn.setRequestProperty("content-type", "application/json");
+            conn.setRequestProperty("api-key", apiKey);
+            conn.setDoOutput(true);
+
+            String body = """
+            {
+              "sender": {"email": "%s"},
+              "to": [{"email": "%s"}],
+              "subject": "%s",
+              "htmlContent": "%s"
+            }
+            """.formatted(from, to, subject, content);
+
+            conn.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
+
+            if (conn.getResponseCode() >= 400) {
+                throw new RuntimeException("Brevo email failed");
+            }
 
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException("Email sending failed", e);
         }
     }
 }
