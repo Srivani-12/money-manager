@@ -14,7 +14,7 @@ public class EmailService {
     @Value("${brevo.api.key}")
     private String apiKey;
 
-    @Value("${spring.mail.properties.mail.smtp.from}")
+    @Value("${mail.from}")
     private String from;
 
     private static final String BREVO_URL = "https://api.brevo.com/v3/smtp/email";
