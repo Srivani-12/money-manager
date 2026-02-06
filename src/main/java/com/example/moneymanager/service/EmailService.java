@@ -1,12 +1,8 @@
 package com.example.moneymanager.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
-
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -24,8 +20,8 @@ public class EmailService {
 
     public void sendEmail(String to, String subject, String content) {
         try {
-            HttpURLConnection conn =
-                    (HttpURLConnection) new URL(BREVO_URL).openConnection();
+            URL url = new URL(BREVO_URL);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod("POST");
             conn.setRequestProperty("accept", "application/json");
@@ -33,23 +29,40 @@ public class EmailService {
             conn.setRequestProperty("api-key", apiKey);
             conn.setDoOutput(true);
 
-            String body = """
-            {
-              "sender": {"email": "%s"},
-              "to": [{"email": "%s"}],
-              "subject": "%s",
-              "htmlContent": "%s"
+            // Using simple JSON manual building, ensuring basic escaping for double quotes
+            // Note: For complex content, consider using a library like Jackson or Gson
+            String body = String.format(
+                    "{\"sender\":{\"email\":\"%s\"},\"to\":[{\"email\":\"%s\"}],\"subject\":\"%s\",\"htmlContent\":\"%s\"}",
+                    from,
+                    to,
+                    escapeJson(subject),
+                    escapeJson(content)
+            );
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = body.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
             }
-            """.formatted(from, to, subject, content);
 
-            conn.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
-
-            if (conn.getResponseCode() >= 400) {
-                throw new RuntimeException("Brevo email failed");
+            int responseCode = conn.getResponseCode();
+            if (responseCode >= 400) {
+                // In a real app, you might read the error stream here for more details
+                throw new RuntimeException("Brevo API error: HTTP " + responseCode);
             }
 
         } catch (Exception e) {
+            // Logs are essential for debugging cloud deployments
+            System.err.println("Failed to send email: " + e.getMessage());
             throw new RuntimeException("Email sending failed", e);
         }
+    }
+
+    // Prevents JSON from breaking if subject/content contains double quotes
+    private String escapeJson(String text) {
+        if (text == null) return "";
+        return text.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 }
