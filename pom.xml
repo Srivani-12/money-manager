@@ -72,10 +72,7 @@
 		</dependency>
 
 		<!-- 📧 Mail (optional but useful) -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
+
 
 		<!-- 📊 Excel / Reports -->
 		<dependency>

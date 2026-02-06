@@ -5,7 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
-@SpringBootApplication
+@SpringBootApplication(
+		exclude = {
+				org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration.class
+		}
+)
 public class MoneymanagerApplication {
 
 	public static void main(String[] args) {
